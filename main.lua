@@ -21,6 +21,7 @@ local instamurdererwin = false
 local noclip = false
 local murdereraimbot = false
 local sheriffaimbot = false
+local antifling = false
 local Murderer = Instance.new("StringValue")
 local Sheriff = Instance.new("StringValue")
 local Hero = Instance.new("StringValue")
@@ -110,6 +111,17 @@ end
 	RunService.RenderStepped:Connect(function()
 		UpdateHighlights()
 		UpdateCharacterRender()
+		task.spawn(function()
+		for _, prplayer in pairs(Players:GetPlayers()) do
+			if prplayer ~= client and prplayer.Character then
+				for _, part in pairs(prplayer.Character:GetChildren()) do
+					if part:IsA("BasePart") and part.Name == "HumanoidRootPart" or part.Name == "Torso" or part.Name == "LowerTorso" or part.Name == "UpperTorso" then
+						part.CanCollide = not antifling.Value
+					end
+				end
+			end
+		end
+		end)
 		local camera = workspace.CurrentCamera
 		local targetName = nil
 		if murdereraimbot and Murderer.Value ~= "#" then
@@ -287,6 +299,7 @@ Library:AddTextbox("WalkSpeed", "Value", function(input)
 		char.Humanoid.WalkSpeed = walkspeed
 	end
 end)
+Library:AddToggle("Antifling", false, function(state) antifling = state end)
 
 
 Library:AddLabel("Teleport")
