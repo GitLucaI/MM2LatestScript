@@ -332,8 +332,9 @@ Library:AddButton("Fling Hero", function() StartFling(Hero.Value) end)
 
 Library:AddButton("Stop Fling", function() StopFling() end)
 Library:AddButton("Rejoin Server", function() TeleportService:Teleport(game.PlaceId, client) end)
-
-
+Library:AddLabel("Other Scripts")
+Library:AddButton("Inifnite Yield", function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end)
+Library:AddButton("7yd7 Emotes", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-7yd7-I-Emote-Script-48024"))() end)
 task.spawn(function()
 	while task.wait(0.5) do
 		local success, data = pcall(function()
