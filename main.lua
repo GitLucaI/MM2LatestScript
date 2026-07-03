@@ -5,12 +5,12 @@ local TeleportService = game:GetService("TeleportService")
 local client = Players.LocalPlayer
 local character = client.Character or client.CharacterAdded:Wait()
 local deadZone = Vector3.new(14, 517, -26)
-
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLucaI/SLib/refs/heads/main/automatic"))()
 client.CharacterAdded:Connect(function(c)
 	character = c
 end)
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLucaI/SLib/refs/heads/main/automatic"))()
+
 
 local roles = {}
 local esp = false
@@ -19,9 +19,12 @@ local notifygundrop = false
 local getgundrop = false
 local instamurdererwin = false
 local noclip = false
+local murdereraimbot = false
+local sheriffaimbot = false
 local Murderer = Instance.new("StringValue")
 local Sheriff = Instance.new("StringValue")
 local Hero = Instance.new("StringValue")
+local camera = workspace.CurrentCamera
 Murderer.Value = "#"
 Sheriff.Value = "#"
 Hero.Value = "#"
@@ -33,6 +36,7 @@ local flinging = false
 local flingConn = nil
 local currentSpin = nil
 local originalCFrame = nil
+
 
 local function IsAlive(playerName)
 	if roles[playerName] then
@@ -102,6 +106,32 @@ local function UpdateHighlights()
 		end
 	end
 end
+
+	RunService.RenderStepped:Connect(function()
+		UpdateHighlights()
+		UpdateCharacterRender()
+		local camera = workspace.CurrentCamera
+		local targetName = nil
+		if murdereraimbot and Murderer.Value ~= "#" then
+			targetName = Murderer.Value
+		elseif sheriffaimbot then
+			if Sheriff.Value ~= "#" then
+				targetName = Sheriff.Value
+			elseif Hero.Value ~= "#" then
+				targetName = Hero.Value
+			end
+		end
+
+		if targetName then
+			local player = Players:FindFirstChild(targetName)
+			print(1)
+			if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				print(2)
+				camera.CFrame = CFrame.new(camera.CFrame.Position, player.Character.HumanoidRootPart.Position)
+			end
+		end
+	end)
+
 
 local function TeleportTo(targetName)
 	local targetPlayer = Players:FindFirstChild(targetName)
@@ -233,6 +263,7 @@ Hero:GetPropertyChangedSignal("Value"):Connect(function()
 	if notifyroles and Hero.Value ~= "#" then Library:Notify("Hero is " .. Hero.Value) end
 end)
 
+
 Library:AddLabel("Visuals")
 Library:AddToggle("Toggle ESP", false, function(state) esp = state end)
 Library:AddToggle("Show Names", false, function(state) shownames.Value = state end)
@@ -250,6 +281,13 @@ end)
 
 Library:AddLabel("Character")
 Library:AddToggle("Noclip", false, function(state) noclip = state end)
+Library:AddTextbox("WalkSpeed", "Value", function(input)
+	local walkspeed = tonumber(input) or 16
+	if walkspeed > 0 then
+		char.Humanoid.WalkSpeed = walkspeed
+	end
+end)
+
 
 Library:AddLabel("Teleport")
 Library:AddButton("Teleport to Murderer", function() TeleportTo(Murderer.Value) end)
@@ -261,6 +299,9 @@ Library:AddTextbox("Field of View", "FOV", function(input)
 	local fov = tonumber(input) or 70
 	workspace.CurrentCamera.FieldOfView = fov
 end)
+
+Library:AddToggle("Murderer Aimbot", false, function(state) murdereraimbot = state end)
+Library:AddToggle("Sheriff Aimbot", false, function(state) sheriffaimbot = state end)
 
 Library:AddLabel("Fling")
 Library:AddButton("Fling Murderer", function() StartFling(Murderer.Value) end)
@@ -278,6 +319,7 @@ Library:AddButton("Fling Hero", function() StartFling(Hero.Value) end)
 
 Library:AddButton("Stop Fling", function() StopFling() end)
 Library:AddButton("Rejoin Server", function() TeleportService:Teleport(game.PlaceId, client) end)
+
 
 task.spawn(function()
 	while task.wait(0.5) do
@@ -302,27 +344,27 @@ task.spawn(function()
 	end
 end)
 
-RunService.RenderStepped:Connect(function()
-	UpdateHighlights()
-	UpdateCharacterRender()
-end)
 
 workspace.DescendantAdded:Connect(function(d)
 	if d.Name == "GunDrop" and d:IsA("Part") then
-		if notifygundrop then
-			Library:Notify("Gun has dropped!")
-		end
 		if getgundrop then
-			task.wait(0.1)
-			local char = client.Character
-			if char and char.PrimaryPart then
-				local oldcf = char.PrimaryPart.CFrame
-				char.PrimaryPart.CFrame = d.CFrame
+			task.spawn(function()
 				task.wait(0.1)
-				if char.PrimaryPart then
-					char.PrimaryPart.CFrame = oldcf
+				local char = client.Character
+				if char and char.PrimaryPart then
+					local oldcf = char.PrimaryPart.CFrame
+					char.PrimaryPart.CFrame = d.CFrame
+					task.wait(0.1)
+					if char.PrimaryPart then
+						char.PrimaryPart.CFrame = oldcf
+					end
 				end
-			end
+			end)
+		end
+		if notifygundrop then
+			task.spawn(function()
+				Library:Notify("Gundrop has spawned") 
+			end)
 		end
 	end
 end)
