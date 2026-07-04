@@ -322,55 +322,42 @@ local function DoSafeCoinCollector()
 			local char = client.Character
 			local hum = char and char:FindFirstChild("Humanoid")
 			local root = char and char:FindFirstChild("HumanoidRootPart")
-
 			if char and hum and root and hum.Health > 0 then
 				hum.WalkSpeed = 32
 				local coins = {}
 				for _, obj in pairs(workspace:GetDescendants()) do
-					if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
+					if obj.Name == "Coin_Server" and obj:IsA("BasePart") then
+						obj.Size = Vector3.new(4, 2, 4)
+						local visual = obj:FindFirstChild("CoinVisual")
+						if visual then visual:Destroy() end
 						table.insert(coins, obj)
 					end
 				end
-
 				if #coins > 0 then
 					table.sort(coins, function(a, b)
 						return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude
 					end)
-
 					local targetCoin = coins[1]
-					local path = PathfindingService:CreatePath({
-						AgentRadius = 2,
-						AgentHeight = 5,
-						AgentCanJump = true,
-						WaypointSpacing = 4
-					})
-
-					local success, _ = pcall(function()
-						path:ComputeAsync(root.Position, targetCoin.Position)
-					end)
-
+					local path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 3})
+					local success, _ = pcall(function() path:ComputeAsync(root.Position, targetCoin.Position) end)
 					if success and path.Status == Enum.PathStatus.Success then
 						local waypoints = path:GetWaypoints()
 						for _, waypoint in ipairs(waypoints) do
-							if not safecoincollector or not targetCoin.Parent or targetCoin.Transparency >= 1 or hum.Health <= 0 then break end
-							if (root.Position - targetCoin.Position).Magnitude <= 6 then break end
-							if waypoint.Action == Enum.PathWaypointAction.Jump then
-								hum.Jump = true
-							end
+							if not safecoincollector or not targetCoin.Parent or hum.Health <= 0 then break end
+							if (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
+							if waypoint.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
-							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 0.5 do
-								if not targetCoin.Parent or targetCoin.Transparency >= 1 or (root.Position - targetCoin.Position).Magnitude <= 6 then break end
+							while (root.Position - waypoint.Position).Magnitude > 3.5 and tick() - timeOut < 0.5 do
+								if not targetCoin.Parent or (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
 								task.wait()
 							end
 						end
 					else
 						hum:MoveTo(targetCoin.Position)
 						local tOut = tick()
-						while targetCoin.Parent and targetCoin.Transparency < 1 and (root.Position - targetCoin.Position).Magnitude > 6 and tick() - tOut < 0.5 do
-							if hum.WalkToPoint.Y > root.Position.Y + 2 then
-								hum.Jump = true
-							end
+						while targetCoin.Parent and (root.Position - targetCoin.Position).Magnitude > 3.5 and tick() - tOut < 0.5 do
+							if hum.WalkToPoint.Y > root.Position.Y + 2 then hum.Jump = true end
 							task.wait()
 						end
 					end
@@ -378,11 +365,14 @@ local function DoSafeCoinCollector()
 			end
 			task.wait()
 		end
-
+		for _, obj in pairs(workspace:GetDescendants()) do
+			if obj.Name == "Coin_Server" and obj:IsA("BasePart") then
+				obj.Size = Vector3.new(1.2000000476837158, 2, 2)
+			end
+		end
 		local char = client.Character
 		local hum = char and char:FindFirstChild("Humanoid")
 		if hum then hum.WalkSpeed = 16 end
-
 		safeCoinLoopRunning = false
 	end)
 end
