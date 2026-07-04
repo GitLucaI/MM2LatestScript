@@ -663,6 +663,10 @@ end)
 
 workspace.DescendantAdded:Connect(function(d)
 	if d.Name == "GunDrop" and d:IsA("Part") then
+		d.Shape = Enum.PartType.Ball
+		local hl = Instance.new("Highlight")
+		hl.FillColor = Color3.new(0, 0.75, 0)
+		hl.Parent = d
 		if getgundrop then
 			task.spawn(function()
 				task.wait(0.1)
@@ -690,10 +694,5 @@ workspace.DescendantAdded:Connect(function(d)
 			hl.FillColor = Color3.new(1, 1, 0)
 			hl.Parent = d
 		end
-	elseif d.Name == "GunDrop" then
-		d.Shape = Enum.PartType.Ball
-		local hl = Instance.new("Highlight")
-		hl.FillColor = Color3.new(0, 0.75, 0)
-		hl.Parent = d
 	end
 end)	
