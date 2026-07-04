@@ -127,7 +127,7 @@ task.spawn(function()
 				if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
 					local root = character.HumanoidRootPart
 					local targetPos = obj.Position
-					local tweenInfo = TweenInfo.new(math.random(0.3, 0.8), Enum.EasingStyle.Linear)
+					local tweenInfo = TweenInfo.new(0.75, Enum.EasingStyle.Linear)
 					local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
 					tween:Play()
 					tween.Completed:Wait()
