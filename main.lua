@@ -12,6 +12,7 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLu
 local roles = {}
 local esp = false
 local coinesp = false
+local gundropesp = false
 local notifyroles = false
 local notifygundrop = false
 local getgundrop = false
@@ -316,7 +317,7 @@ local function updateCoinVisibility()
 				hl.Enabled = false
 			end
 		elseif coin.Name == "GunDrop" then
-			coin.Transparency = coinesp and 0 or 1
+			coin.Transparency = gundropesp and 0 or 1
 			local hl = coin:FindFirstChild("Highlight")
 
 			if coinesp then
@@ -557,8 +558,12 @@ end)
 
 Library:AddLabel("Visuals")
 Library:AddToggle("Toggle ESP", false, function(state) esp = state end)
-Library:AddToggle("Toggle Collectables ESP", false, function(state) 
+Library:AddToggle("Toggle Coin ESP", false, function(state) 
 	coinesp = state 
+	updateCoinVisibility()
+end)
+Library:AddToggle("Toggle Gundrop ESP", false, function(state) 
+	gundropesp = state 
 	updateCoinVisibility()
 end)
 Library:AddToggle("Show Names", false, function(state) shownames.Value = state end)
@@ -687,8 +692,8 @@ workspace.DescendantAdded:Connect(function(d)
 			end)
 		end
 	elseif d.Name == "Coin_Server" and d:IsA("BasePart") then
-		d.Transparency = coinesp and 0 or 1
-		if coinesp then
+		d.Transparency = gundropesp and 0 or 1
+		if gundropesp then
 			d.Shape = Enum.PartType.Ball
 			local hl = Instance.new("Highlight")
 			hl.FillColor = Color3.new(1, 1, 0)
