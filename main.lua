@@ -347,7 +347,7 @@ local function DoSafeCoinCollector()
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
 							while (root.Position - waypoint.Position).Magnitude > 3.5 and tick() - timeOut < 0.5 do
-								if not targetCoin:FindFirstChild("TouchInterest") or (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
+								if not targetCoin:FindFirstChild("TouchInterest") or (root.Position - targetCoin.Position).Magnitude <= 3.5 then targetCoin:Destroy() break end
 								task.wait()
 							end
 						end
