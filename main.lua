@@ -127,36 +127,43 @@ task.spawn(function()
 	while task.wait(0.5) do
 		local hum = character and character:FindFirstChild("Humanoid")
 		if autocollect and character and character:FindFirstChild("HumanoidRootPart") and hum and hum.Health > 0 then
+			local coins = {}
 			for _, obj in pairs(workspace:GetDescendants()) do
-				if not autocollect or not hum or hum.Health <= 0 then break end
-
 				if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
-					local root = character.HumanoidRootPart
-					local targetPos = obj.Position
+					table.insert(coins, obj)
+				end
+			end
 
-					if (root.Position - targetPos).Magnitude <= 1000 then
-						local tweenInfo = TweenInfo.new(cointweentime, Enum.EasingStyle.Linear)
-						currentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
+			for _, obj in pairs(coins) do
+				if not autocollect or not hum or hum.Health <= 0 then break end
+				if not obj.Parent then continue end
 
-						local coinConn
-						coinConn = obj.AncestryChanged:Connect(function(_, parent)
-							if not parent and currentTween then
-								currentTween:Cancel()
-							end
-						end)
+				local root = character.HumanoidRootPart
+				local targetPos = obj.Position
 
-						currentTween:Play()
-						currentTween.Completed:Wait()
-						coinConn:Disconnect()
+				if (root.Position - targetPos).Magnitude <= 1000 then
+					local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+					currentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
 
-						collectedCount = collectedCount + 1
-						if collectedCount >= 5 then
-							task.wait(math.random(1, 3))
-							collectedCount = 0
+					local coinConn
+					coinConn = obj.AncestryChanged:Connect(function(_, parent)
+						if not parent and currentTween then
+							currentTween:Cancel()
 						end
+					end)
 
-						task.wait(0.1)
+					currentTween:Play()
+					currentTween.Completed:Wait()
+					coinConn:Disconnect()
+					currentTween = nil
+
+					collectedCount = collectedCount + 1
+					if collectedCount >= 5 then
+						task.wait(math.random(1, 3))
+						collectedCount = 0
 					end
+
+					task.wait(0.1)
 				end
 			end
 		elseif currentTween then
