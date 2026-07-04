@@ -333,6 +333,10 @@ local function DoSafeCoinCollector()
 				end
 
 				if #coins > 0 then
+					table.sort(coins, function(a, b)
+						return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude
+					end)
+
 					local targetCoin = coins[1]
 					local path = PathfindingService:CreatePath({
 						AgentRadius = 2,
@@ -354,7 +358,7 @@ local function DoSafeCoinCollector()
 							end
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
-							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 1 do
+							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 0.5 do
 								if not targetCoin.Parent or targetCoin.Transparency >= 1 then break end
 								task.wait()
 							end
@@ -362,7 +366,10 @@ local function DoSafeCoinCollector()
 					else
 						hum:MoveTo(targetCoin.Position)
 						local tOut = tick()
-						while targetCoin.Parent and targetCoin.Transparency < 1 and tick() - tOut < 1.5 do
+						while targetCoin.Parent and targetCoin.Transparency < 1 and (root.Position - targetCoin.Position).Magnitude > 4 and tick() - tOut < 0.5 do
+							if hum.WalkToPoint.Y > root.Position.Y + 2 then
+								hum.Jump = true
+							end
 							task.wait()
 						end
 					end
