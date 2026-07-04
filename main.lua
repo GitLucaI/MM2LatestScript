@@ -353,20 +353,21 @@ local function DoSafeCoinCollector()
 						local waypoints = path:GetWaypoints()
 						for _, waypoint in ipairs(waypoints) do
 							if not safecoincollector or not targetCoin.Parent or targetCoin.Transparency >= 1 or hum.Health <= 0 then break end
+							if (root.Position - targetCoin.Position).Magnitude <= 6 then break end
 							if waypoint.Action == Enum.PathWaypointAction.Jump then
 								hum.Jump = true
 							end
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
 							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 0.5 do
-								if not targetCoin.Parent or targetCoin.Transparency >= 1 then break end
+								if not targetCoin.Parent or targetCoin.Transparency >= 1 or (root.Position - targetCoin.Position).Magnitude <= 6 then break end
 								task.wait()
 							end
 						end
 					else
 						hum:MoveTo(targetCoin.Position)
 						local tOut = tick()
-						while targetCoin.Parent and targetCoin.Transparency < 1 and (root.Position - targetCoin.Position).Magnitude > 4 and tick() - tOut < 0.5 do
+						while targetCoin.Parent and targetCoin.Transparency < 1 and (root.Position - targetCoin.Position).Magnitude > 6 and tick() - tOut < 0.5 do
 							if hum.WalkToPoint.Y > root.Position.Y + 2 then
 								hum.Jump = true
 							end
@@ -377,11 +378,11 @@ local function DoSafeCoinCollector()
 			end
 			task.wait()
 		end
-		
+
 		local char = client.Character
 		local hum = char and char:FindFirstChild("Humanoid")
 		if hum then hum.WalkSpeed = 16 end
-		
+
 		safeCoinLoopRunning = false
 	end)
 end
@@ -614,7 +615,7 @@ local function DoAutoSheriffWin()
 							root.AssemblyLinearVelocity = Vector3.zero
 							root.AssemblyAngularVelocity = Vector3.zero
 							workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, currentMRootPos)
-							
+
 							if tick() - startLock > 0.6 and not fired then
 								mouse1click()
 								fired = true
