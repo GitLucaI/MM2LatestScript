@@ -82,7 +82,7 @@ local function StartFly()
 	if not T or not humanoid then return end
 
 	StopFly()
-	
+
 	FLYING = true
 	local BG = Instance.new('BodyGyro')
 	local BV = Instance.new('BodyVelocity')
@@ -256,7 +256,7 @@ task.spawn(function()
 
 				local root = character:FindFirstChild("HumanoidRootPart")
 				if not root then break end
-				
+
 				local targetPos = obj.Position
 
 				if (root.Position - targetPos).Magnitude <= 1000 then
@@ -277,7 +277,7 @@ task.spawn(function()
 
 					currentTween:Play()
 					currentTween.Completed:Wait()
-					
+
 					if coinConn then coinConn:Disconnect() end
 					if bv then bv:Destroy() end
 					currentTween = nil
@@ -309,6 +309,21 @@ local function updateCoinVisibility()
 				if not hl then
 					hl = Instance.new("Highlight")
 					hl.FillColor = Color3.new(1, 1, 0)
+					hl.Parent = coin
+				end
+				hl.Enabled = true
+			elseif hl then
+				hl.Enabled = false
+			end
+		elseif coin.Name == "GunDrop" then
+			coin.Transparency = coinesp and 0 or 1
+			local hl = coin:FindFirstChild("Highlight")
+
+			if coinesp then
+				coin.Shape = Enum.PartType.Ball
+				if not hl then
+					hl = Instance.new("Highlight")
+					hl.FillColor = Color3.new(0, 0.65, 0)
 					hl.Parent = coin
 				end
 				hl.Enabled = true
@@ -484,14 +499,14 @@ local function DoAutoSheriffWin()
 			if char and hum and root and hum.Health > 0 and mPlayer and mPlayer.Character then
 				local mRoot = mPlayer.Character:FindFirstChild("HumanoidRootPart")
 				local mHum = mPlayer.Character:FindFirstChild("Humanoid")
-				
+
 				if mRoot and mHum and mHum.Health > 0 then
 					local gun = char:FindFirstChild("Gun") or client.Backpack:FindFirstChild("Gun")
 					if gun then
 						hum:EquipTool(gun)
 						local oldcf = root.CFrame
 						local tpPos = mRoot.Position + Vector3.new(15, 0, 15)
-						
+
 						local params = RaycastParams.new()
 						params.FilterDescendantsInstances = {mPlayer.Character, char}
 						params.FilterType = Enum.RaycastFilterType.Exclude
@@ -504,13 +519,13 @@ local function DoAutoSheriffWin()
 						local startLock = tick()
 						while tick() - startLock < 0.6 do
 							if not mPlayer.Character or not mPlayer.Character:FindFirstChild("HumanoidRootPart") or mHum.Health <= 0 then break end
-							
+
 							local currentMRootPos = mPlayer.Character.HumanoidRootPart.Position
 							root.CFrame = CFrame.lookAt(tpPos, currentMRootPos)
 							root.AssemblyLinearVelocity = Vector3.zero
 							root.AssemblyAngularVelocity = Vector3.zero
 							workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, currentMRootPos)
-							
+
 							task.wait()
 						end
 
@@ -542,7 +557,7 @@ end)
 
 Library:AddLabel("Visuals")
 Library:AddToggle("Toggle ESP", false, function(state) esp = state end)
-Library:AddToggle("Toggle Coins ESP", false, function(state) 
+Library:AddToggle("Toggle Collectables ESP", false, function(state) 
 	coinesp = state 
 	updateCoinVisibility()
 end)
@@ -676,4 +691,4 @@ workspace.DescendantAdded:Connect(function(d)
 			hl.Parent = d
 		end
 	end
-end)
+end)	
