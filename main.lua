@@ -9,10 +9,6 @@ local character = client.Character or client.CharacterAdded:Wait()
 local deadZone = Vector3.new(14, 517, -26)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLucaI/SLib/refs/heads/main/automatic"))()
 
-client.CharacterAdded:Connect(function(c)
-	character = c
-end)
-
 local roles = {}
 local esp = false
 local coinesp = false
@@ -42,6 +38,7 @@ local flingConn = nil
 local currentSpin = nil
 local originalCFrame = nil
 
+local flyToggled = false
 local FLYING = false
 local iyflyspeed = 1
 local vehicleflyspeed = 1
@@ -51,6 +48,129 @@ local SPEED = 0
 local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 local flyKeyDown, flyKeyUp
+
+local autoSheriffLoopRunning = false
+local instaWinLoopRunning = false
+
+local function StopFly()
+	FLYING = false
+	if flyKeyDown then flyKeyDown:Disconnect() end
+	if flyKeyUp then flyKeyUp:Disconnect() end
+
+	local char = client.Character
+	if char then
+		local humanoid = char:FindFirstChildOfClass('Humanoid')
+		if humanoid then
+			humanoid.PlatformStand = false
+		end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root then
+			local bg = root:FindFirstChildOfClass("BodyGyro")
+			local bv = root:FindFirstChildOfClass("BodyVelocity")
+			if bg then bg:Destroy() end
+			if bv then bv:Destroy() end
+		end
+	end
+end
+
+local function StartFly()
+	local char = client.Character
+	if not char then return end
+
+	local T = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if not T or not humanoid then return end
+
+	StopFly()
+	
+	FLYING = true
+	local BG = Instance.new('BodyGyro')
+	local BV = Instance.new('BodyVelocity')
+	BG.P = 9e4
+	BG.Parent = T
+	BV.Parent = T
+	BG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+	BG.CFrame = T.CFrame
+	BV.Velocity = Vector3.new(0, 0, 0)
+	BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
+	task.spawn(function()
+		repeat task.wait()
+			local cam = workspace.CurrentCamera
+			if not vfly and humanoid then
+				humanoid.PlatformStand = true
+			end
+
+			if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+				SPEED = 50
+			elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+				SPEED = 0
+			end
+			if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+				BV.Velocity = ((cam.CFrame.LookVector * (CONTROL.F + CONTROL.B)) + ((cam.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).Position) - cam.CFrame.Position)) * SPEED
+				lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+			elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+				BV.Velocity = ((cam.CFrame.LookVector * (lCONTROL.F + lCONTROL.B)) + ((cam.CFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).Position) - cam.CFrame.Position)) * SPEED
+			else
+				BV.Velocity = Vector3.new(0, 0, 0)
+			end
+			BG.CFrame = cam.CFrame
+		until not FLYING
+
+		CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+		lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+		SPEED = 0
+		if BG then BG:Destroy() end
+		if BV then BV:Destroy() end
+		if humanoid then humanoid.PlatformStand = false end
+	end)
+
+	flyKeyDown = UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then return end
+		if input.KeyCode == Enum.KeyCode.W then
+			CONTROL.F = (vfly and vehicleflyspeed or iyflyspeed)
+		elseif input.KeyCode == Enum.KeyCode.S then
+			CONTROL.B = - (vfly and vehicleflyspeed or iyflyspeed)
+		elseif input.KeyCode == Enum.KeyCode.A then
+			CONTROL.L = - (vfly and vehicleflyspeed or iyflyspeed)
+		elseif input.KeyCode == Enum.KeyCode.D then
+			CONTROL.R = (vfly and vehicleflyspeed or iyflyspeed)
+		elseif input.KeyCode == Enum.KeyCode.E and QEfly then
+			CONTROL.Q = (vfly and vehicleflyspeed or iyflyspeed) * 2
+		elseif input.KeyCode == Enum.KeyCode.Q and QEfly then
+			CONTROL.E = -(vfly and vehicleflyspeed or iyflyspeed) * 2
+		end
+	end)
+
+	flyKeyUp = UserInputService.InputEnded:Connect(function(input, processed)
+		if processed then return end
+		if input.KeyCode == Enum.KeyCode.W then
+			CONTROL.F = 0
+		elseif input.KeyCode == Enum.KeyCode.S then
+			CONTROL.B = 0
+		elseif input.KeyCode == Enum.KeyCode.A then
+			CONTROL.L = 0
+		elseif input.KeyCode == Enum.KeyCode.D then
+			CONTROL.R = 0
+		elseif input.KeyCode == Enum.KeyCode.E then
+			CONTROL.Q = 0
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			CONTROL.E = 0
+		end
+	end)
+end
+
+client.CharacterAdded:Connect(function(c)
+	character = c
+	task.spawn(function()
+		local root = c:WaitForChild("HumanoidRootPart", 5)
+		local hum = c:WaitForChild("Humanoid", 5)
+		if flyToggled and root and hum then
+			task.wait(0.2)
+			StartFly()
+		end
+	end)
+end)
 
 local function IsAlive(playerName)
 	if roles[playerName] then
@@ -79,21 +199,6 @@ RunService.Stepped:Connect(function()
 		wasNoclip = false
 	end
 end)
-
-local function getTarget(input)
-	if input == "" then return nil end 
-	input = string.lower(input)
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= client then
-			local name = string.lower(player.Name)
-			local displayName = string.lower(player.DisplayName)
-			if string.sub(name, 1, #input) == input or string.sub(displayName, 1, #input) == input then
-				return player	
-			end
-		end
-	end
-	return nil
-end
 
 local function UpdateHighlights()
 	for _, v in pairs(Players:GetPlayers()) do
@@ -217,26 +322,22 @@ end
 RunService:BindToRenderStep("AimbotAndVisuals", Enum.RenderPriority.Camera.Value + 1, function()
 	UpdateHighlights()
 	local targetName = nil
-	task.spawn(function()
-		if murdereraimbot and Murderer.Value ~= "#" then
-			targetName = Murderer.Value
-		elseif sheriffaimbot then
-			if Sheriff.Value ~= "#" then
-				targetName = Sheriff.Value
-			elseif Hero.Value ~= "#" then
-				targetName = Hero.Value
-			end
+	if murdereraimbot and Murderer.Value ~= "#" then
+		targetName = Murderer.Value
+	elseif sheriffaimbot then
+		if Sheriff.Value ~= "#" then
+			targetName = Sheriff.Value
+		elseif Hero.Value ~= "#" then
+			targetName = Hero.Value
 		end
-	end)
+	end
 
-	task.spawn(function()
-		if targetName then
-			local player = Players:FindFirstChild(targetName)
-			if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-				camera.CFrame = CFrame.lookAt(camera.CFrame.Position, player.Character.HumanoidRootPart.Position)
-			end
+	if targetName then
+		local player = Players:FindFirstChild(targetName)
+		if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			camera.CFrame = CFrame.lookAt(camera.CFrame.Position, player.Character.HumanoidRootPart.Position)
 		end
-	end)
+	end
 
 	for _, prplayer in pairs(Players:GetPlayers()) do
 		if prplayer ~= client and prplayer.Character then
@@ -335,202 +436,108 @@ local function StartFling(targetName)
 end
 
 local function DoInstaWin()
-	if instamurdererwin and Murderer.Value == client.Name then
-		task.spawn(function()
-			local char = client.Character
-			local hum = char and char:FindFirstChild("Humanoid")
-			local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not instamurdererwin or instaWinLoopRunning then return end
+	instaWinLoopRunning = true
+	task.spawn(function()
+		while instamurdererwin do
+			if Murderer.Value == client.Name then
+				local char = client.Character
+				local hum = char and char:FindFirstChild("Humanoid")
+				local root = char and char:FindFirstChild("HumanoidRootPart")
 
-			if char and hum and root then
-				local knife = char:FindFirstChild("Knife") or client.Backpack:FindFirstChild("Knife")
-				if knife then
-					hum:EquipTool(knife)
-					task.wait(0.1)
-
-					for _, player in pairs(Players:GetPlayers()) do
-						if player ~= client then
-							while player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart") and hum.Health > 0 and instamurdererwin do
-								local tRoot = player.Character.HumanoidRootPart
-								if (tRoot.Position - deadZone).Magnitude < 1000 then
-									break
+				if char and hum and root then
+					local knife = char:FindFirstChild("Knife") or client.Backpack:FindFirstChild("Knife")
+					if knife then
+						hum:EquipTool(knife)
+						for _, player in pairs(Players:GetPlayers()) do
+							if player ~= client then
+								while player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart") and hum.Health > 0 and instamurdererwin do
+									local tRoot = player.Character.HumanoidRootPart
+									if (tRoot.Position - deadZone).Magnitude < 1000 then
+										break
+									end
+									root.CFrame = tRoot.CFrame
+									mouse1click()
+									task.wait()
 								end
-								root.CFrame = tRoot.CFrame
-								mouse1click()
-								task.wait()
 							end
 						end
 					end
 				end
 			end
-		end)
-	end
+			task.wait(0.1)
+		end
+		instaWinLoopRunning = false
+	end)
 end
 
 local function DoAutoSheriffWin()
-	if autosheriffwin and (Sheriff.Value == client.Name or Hero.Value == client.Name) then
-		task.spawn(function()
-			while autosheriffwin and (Sheriff.Value == client.Name or Hero.Value == client.Name) do
-				local char = client.Character
-				local hum = char and char:FindFirstChild("Humanoid")
-				local root = char and char:FindFirstChild("HumanoidRootPart")
-				local mPlayer = Players:FindFirstChild(Murderer.Value)
+	if not autosheriffwin or autoSheriffLoopRunning then return end
+	autoSheriffLoopRunning = true
+	task.spawn(function()
+		while autosheriffwin do
+			local char = client.Character
+			local hum = char and char:FindFirstChild("Humanoid")
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local mPlayer = Players:FindFirstChild(Murderer.Value)
 
-				if char and hum and root and hum.Health > 0 and mPlayer and mPlayer.Character and mPlayer.Character:FindFirstChild("HumanoidRootPart") and mPlayer.Character:FindFirstChild("Humanoid") and mPlayer.Character.Humanoid.Health > 0 then
+			if char and hum and root and hum.Health > 0 and mPlayer and mPlayer.Character then
+				local mRoot = mPlayer.Character:FindFirstChild("HumanoidRootPart")
+				local mHum = mPlayer.Character:FindFirstChild("Humanoid")
+				
+				if mRoot and mHum and mHum.Health > 0 then
 					local gun = char:FindFirstChild("Gun") or client.Backpack:FindFirstChild("Gun")
 					if gun then
 						hum:EquipTool(gun)
 						local oldcf = root.CFrame
-						local mRoot = mPlayer.Character.HumanoidRootPart
-
 						local tpPos = mRoot.Position + Vector3.new(15, 0, 15)
+						
 						local params = RaycastParams.new()
 						params.FilterDescendantsInstances = {mPlayer.Character, char}
 						params.FilterType = Enum.RaycastFilterType.Exclude
 
-						for angle = 0, 360, 45 do
-							local rad = math.rad(angle)
-							local offset = Vector3.new(math.cos(rad) * 15, 0, math.sin(rad) * 15)
-							local checkPos = mRoot.Position + offset
-							local ray = workspace:Raycast(checkPos, (mRoot.Position - checkPos), params)
-							if not ray then
-								tpPos = checkPos
-								break
-							end
+						local checkRay = workspace:Raycast(mRoot.Position, Vector3.new(15, 0, 15), params)
+						if checkRay then
+							tpPos = mRoot.Position + Vector3.new(0, 15, 0)
 						end
 
-						root.CFrame = CFrame.lookAt(tpPos, mRoot.Position)
-						root.Anchored = true
+						local startLock = tick()
+						while tick() - startLock < 0.6 do
+							if not mPlayer.Character or not mPlayer.Character:FindFirstChild("HumanoidRootPart") or mHum.Health <= 0 then break end
+							
+							local currentMRootPos = mPlayer.Character.HumanoidRootPart.Position
+							root.CFrame = CFrame.lookAt(tpPos, currentMRootPos)
+							root.AssemblyLinearVelocity = Vector3.zero
+							root.AssemblyAngularVelocity = Vector3.zero
+							workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, currentMRootPos)
+							
+							task.wait()
+						end
 
-						task.wait(0.15)
-						workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, mRoot.Position)
-						task.wait(0.1)
 						mouse1click()
 						task.wait(0.3)
 
-						root.Anchored = false
 						root.CFrame = oldcf
 						task.wait(1)
 					end
 				end
-				task.wait(0.1)
 			end
-		end)
-	end
-end
-
-local function StartFly()
-	local char = client.Character
-	if not char then return end
-
-	local T = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
-	if not T or not humanoid then return end
-
-	FLYING = true
-	local BG = Instance.new('BodyGyro')
-	local BV = Instance.new('BodyVelocity')
-	BG.P = 9e4
-	BG.Parent = T
-	BV.Parent = T
-	BG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-	BG.CFrame = T.CFrame
-	BV.Velocity = Vector3.new(0, 0, 0)
-	BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-
-	task.spawn(function()
-		repeat task.wait()
-			local camera = workspace.CurrentCamera
-			if not vfly and humanoid then
-				humanoid.PlatformStand = true
-			end
-
-			if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
-				SPEED = 50
-			elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
-				SPEED = 0
-			end
-			if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
-				BV.Velocity = ((camera.CFrame.LookVector * (CONTROL.F + CONTROL.B)) + ((camera.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).Position) - camera.CFrame.Position)) * SPEED
-				lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
-			elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
-				BV.Velocity = ((camera.CFrame.LookVector * (lCONTROL.F + lCONTROL.B)) + ((camera.CFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).Position) - camera.CFrame.Position)) * SPEED
-			else
-				BV.Velocity = Vector3.new(0, 0, 0)
-			end
-			BG.CFrame = camera.CFrame
-		until not FLYING
-
-		CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-		lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-		SPEED = 0
-		if BG then BG:Destroy() end
-		if BV then BV:Destroy() end
-		if humanoid then humanoid.PlatformStand = false end
-	end)
-
-	flyKeyDown = UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then return end
-		if input.KeyCode == Enum.KeyCode.W then
-			CONTROL.F = (vfly and vehicleflyspeed or iyflyspeed)
-		elseif input.KeyCode == Enum.KeyCode.S then
-			CONTROL.B = - (vfly and vehicleflyspeed or iyflyspeed)
-		elseif input.KeyCode == Enum.KeyCode.A then
-			CONTROL.L = - (vfly and vehicleflyspeed or iyflyspeed)
-		elseif input.KeyCode == Enum.KeyCode.D then
-			CONTROL.R = (vfly and vehicleflyspeed or iyflyspeed)
-		elseif input.KeyCode == Enum.KeyCode.E and QEfly then
-			CONTROL.Q = (vfly and vehicleflyspeed or iyflyspeed) * 2
-		elseif input.KeyCode == Enum.KeyCode.Q and QEfly then
-			CONTROL.E = -(vfly and vehicleflyspeed or iyflyspeed) * 2
+			task.wait(0.1)
 		end
+		autoSheriffLoopRunning = false
 	end)
-
-	flyKeyUp = UserInputService.InputEnded:Connect(function(input, processed)
-		if processed then return end
-		if input.KeyCode == Enum.KeyCode.W then
-			CONTROL.F = 0
-		elseif input.KeyCode == Enum.KeyCode.S then
-			CONTROL.B = 0
-		elseif input.KeyCode == Enum.KeyCode.A then
-			CONTROL.L = 0
-		elseif input.KeyCode == Enum.KeyCode.D then
-			CONTROL.R = 0
-		elseif input.KeyCode == Enum.KeyCode.E then
-			CONTROL.Q = 0
-		elseif input.KeyCode == Enum.KeyCode.Q then
-			CONTROL.E = 0
-		end
-	end)
-end
-
-local function StopFly()
-	FLYING = false
-	if flyKeyDown then flyKeyDown:Disconnect() end
-	if flyKeyUp then flyKeyUp:Disconnect() end
-
-	local char = client.Character
-	if char then
-		local humanoid = char:FindFirstChildOfClass('Humanoid')
-		if humanoid then
-			humanoid.PlatformStand = false
-		end
-	end
 end
 
 Murderer:GetPropertyChangedSignal("Value"):Connect(function()
 	if notifyroles and Murderer.Value ~= "#" then Library:Notify("Murderer is " .. Murderer.Value) end
-	DoInstaWin()
-	DoAutoSheriffWin()
 end)
 
 Sheriff:GetPropertyChangedSignal("Value"):Connect(function()
 	if notifyroles and Sheriff.Value ~= "#" then Library:Notify("Sheriff is " .. Sheriff.Value) end
-	DoAutoSheriffWin()
 end)
 
 Hero:GetPropertyChangedSignal("Value"):Connect(function()
 	if notifyroles and Hero.Value ~= "#" then Library:Notify("Hero is " .. Hero.Value) end
-	DoAutoSheriffWin()
 end)
 
 Library:AddLabel("Visuals")
@@ -549,11 +556,11 @@ Library:AddLabel("Auto")
 Library:AddToggle("Auto Gundrop", false, function(state) getgundrop = state end)
 Library:AddToggle("Insta Murderer Win", false, function(state) 
 	instamurdererwin = state 
-	DoInstaWin()
+	if state then DoInstaWin() end
 end)
 Library:AddToggle("Auto Sheriff/Hero Win", false, function(state)
 	autosheriffwin = state
-	DoAutoSheriffWin()
+	if state then DoAutoSheriffWin() end
 end)
 Library:AddTextbox("Coin Tween Time", "Value", function(input)
 	local ctt = tonumber(input) or 0.9
@@ -563,6 +570,7 @@ Library:AddToggle("Auto Collect Coins", false, function(state) autocollect = sta
 
 Library:AddLabel("Character")
 Library:AddToggle("Fly", false, function(state)
+	flyToggled = state
 	if state then
 		StartFly()
 	else
