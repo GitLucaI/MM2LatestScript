@@ -354,18 +354,27 @@ local function DoSafeCoinCollector()
 							end
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
-							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 1.5 do
+							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 1 do
+								if not targetCoin.Parent or targetCoin.Transparency >= 1 then break end
 								task.wait()
 							end
 						end
 					else
 						hum:MoveTo(targetCoin.Position)
-						task.wait(1)
+						local tOut = tick()
+						while targetCoin.Parent and targetCoin.Transparency < 1 and tick() - tOut < 1.5 do
+							task.wait()
+						end
 					end
 				end
 			end
-			task.wait(0.1)
+			task.wait()
 		end
+		
+		local char = client.Character
+		local hum = char and char:FindFirstChild("Humanoid")
+		if hum then hum.WalkSpeed = 16 end
+		
 		safeCoinLoopRunning = false
 	end)
 end
@@ -663,7 +672,13 @@ end)
 Library:AddToggle("Auto Collect Coins", false, function(state) autocollect = state end)
 Library:AddToggle("Safe Coin Collector", false, function(state) 
 	safecoincollector = state 
-	if state then DoSafeCoinCollector() end
+	if state then 
+		DoSafeCoinCollector() 
+	else
+		local char = client.Character
+		local hum = char and char:FindFirstChild("Humanoid")
+		if hum then hum.WalkSpeed = 16 end
+	end
 end)
 
 Library:AddLabel("Character")
