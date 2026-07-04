@@ -121,16 +121,24 @@ local function UpdateHighlights()
 end
 
 task.spawn(function()
+	local collectedCount = 0
 	while task.wait(0.5) do
 		if autocollect and character and character:FindFirstChild("HumanoidRootPart") then
 			for _, obj in pairs(workspace:GetDescendants()) do
 				if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
 					local root = character.HumanoidRootPart
 					local targetPos = obj.Position
-					local tweenInfo = TweenInfo.new(0.75, Enum.EasingStyle.Linear)
+					local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Linear)
 					local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
 					tween:Play()
 					tween.Completed:Wait()
+
+					collectedCount = collectedCount + 1
+					if collectedCount >= 5 then
+						task.wait(math.random(1, 3))
+						collectedCount = 0
+					end
+
 					task.wait(0.1)
 				end
 			end
