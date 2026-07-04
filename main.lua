@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local PathfindingService = game:GetService("PathfindingService")
 local client = Players.LocalPlayer
 local character = client.Character or client.CharacterAdded:Wait()
 local deadZone = Vector3.new(14, 517, -26)
@@ -23,6 +24,7 @@ local murdereraimbot = false
 local sheriffaimbot = false
 local antifling = false
 local autocollect = false
+local safecoincollector = false
 local cointweentime = 0.9
 local Murderer = Instance.new("StringValue")
 local Sheriff = Instance.new("StringValue")
@@ -52,6 +54,19 @@ local flyKeyDown, flyKeyUp
 
 local autoSheriffLoopRunning = false
 local instaWinLoopRunning = false
+local safeCoinLoopRunning = false
+
+local function GetPlayer(str)
+	str = string.lower(str)
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= client then
+			if string.lower(string.sub(p.Name, 1, #str)) == str or string.lower(string.sub(p.DisplayName, 1, #str)) == str then
+				return p.Name
+			end
+		end
+	end
+	return nil
+end
 
 local function StopFly()
 	FLYING = false
@@ -166,8 +181,8 @@ client.CharacterAdded:Connect(function(c)
 	task.spawn(function()
 		local root = c:WaitForChild("HumanoidRootPart", 5)
 		local hum = c:WaitForChild("Humanoid", 5)
+		task.wait(1)
 		if flyToggled and root and hum then
-			task.wait(0.2)
 			StartFly()
 		end
 	end)
@@ -299,33 +314,89 @@ task.spawn(function()
 	end
 end)
 
+local function DoSafeCoinCollector()
+	if not safecoincollector or safeCoinLoopRunning then return end
+	safeCoinLoopRunning = true
+	task.spawn(function()
+		while safecoincollector do
+			local char = client.Character
+			local hum = char and char:FindFirstChild("Humanoid")
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+
+			if char and hum and root and hum.Health > 0 then
+				hum.WalkSpeed = 32
+				local coins = {}
+				for _, obj in pairs(workspace:GetDescendants()) do
+					if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
+						table.insert(coins, obj)
+					end
+				end
+
+				if #coins > 0 then
+					local targetCoin = coins[1]
+					local path = PathfindingService:CreatePath({
+						AgentRadius = 2,
+						AgentHeight = 5,
+						AgentCanJump = true,
+						WaypointSpacing = 4
+					})
+
+					local success, _ = pcall(function()
+						path:ComputeAsync(root.Position, targetCoin.Position)
+					end)
+
+					if success and path.Status == Enum.PathStatus.Success then
+						local waypoints = path:GetWaypoints()
+						for _, waypoint in ipairs(waypoints) do
+							if not safecoincollector or not targetCoin.Parent or targetCoin.Transparency >= 1 or hum.Health <= 0 then break end
+							if waypoint.Action == Enum.PathWaypointAction.Jump then
+								hum.Jump = true
+							end
+							hum:MoveTo(waypoint.Position)
+							local timeOut = tick()
+							while (root.Position - waypoint.Position).Magnitude > 4 and tick() - timeOut < 1.5 do
+								task.wait()
+							end
+						end
+					else
+						hum:MoveTo(targetCoin.Position)
+						task.wait(1)
+					end
+				end
+			end
+			task.wait(0.1)
+		end
+		safeCoinLoopRunning = false
+	end)
+end
+
 local function updateCoinVisibility()
-	for _, coin in pairs(workspace:GetDescendants()) do
-		if coin.Name == "Coin_Server" and coin:IsA("BasePart") then
-			coin.Transparency = coinesp and 0 or 1
-			local hl = coin:FindFirstChild("Highlight")
+	for _, obj in pairs(workspace:GetDescendants()) do
+		if obj.Name == "Coin_Server" and obj:IsA("BasePart") then
+			obj.Transparency = coinesp and 0 or 1
+			local hl = obj:FindFirstChild("Highlight")
 
 			if coinesp then
-				coin.Shape = Enum.PartType.Ball
+				obj.Shape = Enum.PartType.Ball
 				if not hl then
 					hl = Instance.new("Highlight")
 					hl.FillColor = Color3.new(1, 1, 0)
-					hl.Parent = coin
+					hl.Parent = obj
 				end
 				hl.Enabled = true
 			elseif hl then
 				hl.Enabled = false
 			end
-		elseif coin.Name == "GunDrop" then
-			coin.Transparency = gundropesp and 0 or 1
-			local hl = coin:FindFirstChild("Highlight")
+		elseif obj.Name == "GunDrop" and obj:IsA("BasePart") then
+			obj.Transparency = gundropesp and 0 or 1
+			local hl = obj:FindFirstChild("Highlight")
 
-			if coinesp then
-				coin.Shape = Enum.PartType.Ball
+			if gundropesp then
+				obj.Shape = Enum.PartType.Ball
 				if not hl then
 					hl = Instance.new("Highlight")
 					hl.FillColor = Color3.new(0, 0.65, 0)
-					hl.Parent = coin
+					hl.Parent = obj
 				end
 				hl.Enabled = true
 			elseif hl then
@@ -518,7 +589,8 @@ local function DoAutoSheriffWin()
 						end
 
 						local startLock = tick()
-						while tick() - startLock < 0.6 do
+						local fired = false
+						while tick() - startLock < 1.5 do
 							if not mPlayer.Character or not mPlayer.Character:FindFirstChild("HumanoidRootPart") or mHum.Health <= 0 then break end
 
 							local currentMRootPos = mPlayer.Character.HumanoidRootPart.Position
@@ -526,12 +598,14 @@ local function DoAutoSheriffWin()
 							root.AssemblyLinearVelocity = Vector3.zero
 							root.AssemblyAngularVelocity = Vector3.zero
 							workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, currentMRootPos)
+							
+							if tick() - startLock > 0.6 and not fired then
+								mouse1click()
+								fired = true
+							end
 
 							task.wait()
 						end
-
-						mouse1click()
-						task.wait(0.3)
 
 						root.CFrame = oldcf
 						task.wait(1)
@@ -587,6 +661,10 @@ Library:AddTextbox("Coin Tween Time", "Value", function(input)
 	cointweentime = ctt
 end)
 Library:AddToggle("Auto Collect Coins", false, function(state) autocollect = state end)
+Library:AddToggle("Safe Coin Collector", false, function(state) 
+	safecoincollector = state 
+	if state then DoSafeCoinCollector() end
+end)
 
 Library:AddLabel("Character")
 Library:AddToggle("Fly", false, function(state)
@@ -626,6 +704,12 @@ Library:AddToggle("Murderer Aimbot", false, function(state) murdereraimbot = sta
 Library:AddToggle("Sheriff Aimbot", false, function(state) sheriffaimbot = state end)
 
 Library:AddLabel("Fling")
+Library:AddTextbox("Fling Player", "Name", function(input)
+	local targetName = GetPlayer(input)
+	if targetName then
+		StartFling(targetName)
+	end
+end)
 Library:AddButton("Fling Murderer", function() StartFling(Murderer.Value) end)
 Library:AddButton("Fling Sheriff", function() StartFling(Sheriff.Value) end)
 Library:AddButton("Fling Hero", function() StartFling(Hero.Value) end)
@@ -667,11 +751,14 @@ task.spawn(function()
 end)
 
 workspace.DescendantAdded:Connect(function(d)
-	if d.Name == "GunDrop" and d:IsA("Part") then
-		d.Shape = Enum.PartType.Ball
-		local hl = Instance.new("Highlight")
-		hl.FillColor = Color3.new(0, 0.75, 0)
-		hl.Parent = d
+	if d.Name == "GunDrop" and d:IsA("BasePart") then
+		d.Transparency = gundropesp and 0 or 1
+		if gundropesp then
+			d.Shape = Enum.PartType.Ball
+			local hl = Instance.new("Highlight")
+			hl.FillColor = Color3.new(0, 0.75, 0)
+			hl.Parent = d
+		end
 		if getgundrop then
 			task.spawn(function()
 				task.wait(0.1)
@@ -692,12 +779,12 @@ workspace.DescendantAdded:Connect(function(d)
 			end)
 		end
 	elseif d.Name == "Coin_Server" and d:IsA("BasePart") then
-		d.Transparency = gundropesp and 0 or 1
-		if gundropesp then
+		d.Transparency = coinesp and 0 or 1
+		if coinesp then
 			d.Shape = Enum.PartType.Ball
 			local hl = Instance.new("Highlight")
 			hl.FillColor = Color3.new(1, 1, 0)
 			hl.Parent = d
 		end
 	end
-end)	
+end)
