@@ -26,6 +26,7 @@ local murdereraimbot = false
 local sheriffaimbot = false
 local antifling = false
 local autocollect = false
+local cointweentime = 0.9
 local Murderer = Instance.new("StringValue")
 local Sheriff = Instance.new("StringValue")
 local Hero = Instance.new("StringValue")
@@ -134,7 +135,7 @@ task.spawn(function()
 					local targetPos = obj.Position
 
 					if (root.Position - targetPos).Magnitude <= 1000 then
-						local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+						local tweenInfo = TweenInfo.new(cointweentime, Enum.EasingStyle.Linear)
 						currentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
 
 						local coinConn
@@ -526,6 +527,10 @@ end)
 Library:AddToggle("Auto Sheriff/Hero Win", false, function(state)
 	autosheriffwin = state
 	DoAutoSheriffWin()
+end)
+Library:AddTextbox("Coin Tween Time", "Value", function(input)
+	local ctt = tonumber(input) or 0.9
+	cointweentime = ctt
 end)
 Library:AddToggle("Auto Collect Coins", false, function(state) autocollect = state end)
 
