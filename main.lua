@@ -59,13 +59,24 @@ local function IsAlive(playerName)
 	return false
 end
 
+local wasNoclip = false
 RunService.Stepped:Connect(function()
-	if noclip or autocollect and character then
+	if noclip and character then
 		for _, part in pairs(character:GetChildren()) do
 			if part:IsA("BasePart") then
 				part.CanCollide = false
 			end
 		end
+		wasNoclip = true
+	elseif wasNoclip and character then
+		for _, part in pairs(character:GetChildren()) do
+			if part:IsA("BasePart") then
+				if part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Head" or part.Name == "HumanoidRootPart" then
+					part.CanCollide = true
+				end
+			end
+		end
+		wasNoclip = false
 	end
 end)
 
@@ -136,14 +147,21 @@ task.spawn(function()
 
 			for _, obj in pairs(coins) do
 				if not autocollect or not hum or hum.Health <= 0 then break end
-				if not obj.Parent then continue end
+				if not obj.Parent or obj.Transparency >= 1 then continue end
 
-				local root = character.HumanoidRootPart
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if not root then break end
+				
 				local targetPos = obj.Position
 
 				if (root.Position - targetPos).Magnitude <= 1000 then
-					local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+					local tweenInfo = TweenInfo.new(cointweentime, Enum.EasingStyle.Linear)
 					currentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
+
+					local bv = Instance.new("BodyVelocity")
+					bv.MaxForce = Vector3.new(100000, 100000, 100000)
+					bv.Velocity = Vector3.zero
+					bv.Parent = root
 
 					local coinConn
 					coinConn = obj.AncestryChanged:Connect(function(_, parent)
@@ -154,7 +172,9 @@ task.spawn(function()
 
 					currentTween:Play()
 					currentTween.Completed:Wait()
-					coinConn:Disconnect()
+					
+					if coinConn then coinConn:Disconnect() end
+					if bv then bv:Destroy() end
 					currentTween = nil
 
 					collectedCount = collectedCount + 1
@@ -649,5 +669,3 @@ workspace.DescendantAdded:Connect(function(d)
 		end
 	end
 end)
-
-updateCoinVisibility()
