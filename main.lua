@@ -122,26 +122,45 @@ end
 
 task.spawn(function()
 	local collectedCount = 0
+	local currentTween = nil
 	while task.wait(0.5) do
-		if autocollect and character and character:FindFirstChild("HumanoidRootPart") then
+		local hum = character and character:FindFirstChild("Humanoid")
+		if autocollect and character and character:FindFirstChild("HumanoidRootPart") and hum and hum.Health > 0 then
 			for _, obj in pairs(workspace:GetDescendants()) do
+				if not autocollect or not hum or hum.Health <= 0 then break end
+
 				if obj.Name == "Coin_Server" and obj:IsA("BasePart") and obj.Transparency < 1 then
 					local root = character.HumanoidRootPart
 					local targetPos = obj.Position
-					local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Linear)
-					local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
-					tween:Play()
-					tween.Completed:Wait()
 
-					collectedCount = collectedCount + 1
-					if collectedCount >= 5 then
-						task.wait(math.random(1, 3))
-						collectedCount = 0
+					if (root.Position - targetPos).Magnitude <= 1000 then
+						local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+						currentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
+
+						local coinConn
+						coinConn = obj.AncestryChanged:Connect(function(_, parent)
+							if not parent and currentTween then
+								currentTween:Cancel()
+							end
+						end)
+
+						currentTween:Play()
+						currentTween.Completed:Wait()
+						coinConn:Disconnect()
+
+						collectedCount = collectedCount + 1
+						if collectedCount >= 5 then
+							task.wait(math.random(1, 3))
+							collectedCount = 0
+						end
+
+						task.wait(0.1)
 					end
-
-					task.wait(0.1)
 				end
 			end
+		elseif currentTween then
+			currentTween:Cancel()
+			currentTween = nil
 		end
 	end
 end)
