@@ -328,8 +328,6 @@ local function DoSafeCoinCollector()
 				for _, obj in pairs(workspace:GetDescendants()) do
 					if obj.Name == "Coin_Server" and obj:IsA("BasePart") then
 						obj.Size = Vector3.new(4, 2, 4)
-						local visual = obj:FindFirstChild("CoinVisual")
-						if visual then visual:Destroy() end
 						table.insert(coins, obj)
 					end
 				end
@@ -343,20 +341,20 @@ local function DoSafeCoinCollector()
 					if success and path.Status == Enum.PathStatus.Success then
 						local waypoints = path:GetWaypoints()
 						for _, waypoint in ipairs(waypoints) do
-							if not safecoincollector or not targetCoin.Parent or hum.Health <= 0 then break end
+							if not safecoincollector or not targetCoin:FindFirstChild("TouchInterest") or hum.Health <= 0 then break end
 							if (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
 							if waypoint.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
 							hum:MoveTo(waypoint.Position)
 							local timeOut = tick()
 							while (root.Position - waypoint.Position).Magnitude > 3.5 and tick() - timeOut < 0.5 do
-								if not targetCoin.Parent or (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
+								if not targetCoin:FindFirstChild("TouchInterest") or (root.Position - targetCoin.Position).Magnitude <= 3.5 then break end
 								task.wait()
 							end
 						end
 					else
 						hum:MoveTo(targetCoin.Position)
 						local tOut = tick()
-						while targetCoin.Parent and (root.Position - targetCoin.Position).Magnitude > 3.5 and tick() - tOut < 0.5 do
+						while targetCoin:FindFirstChild("TouchInterest") and (root.Position - targetCoin.Position).Magnitude > 3.5 and tick() - tOut < 0.5 do
 							if hum.WalkToPoint.Y > root.Position.Y + 2 then hum.Jump = true end
 							task.wait()
 						end
