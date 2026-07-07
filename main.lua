@@ -9,7 +9,10 @@ local client = Players.LocalPlayer
 local character = client.Character or client.CharacterAdded:Wait()
 local deadZone = Vector3.new(14, 517, -26)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLucaI/SLib/refs/heads/main/automatic"))()
-
+Library:SetBackgroundTheme(ColorSequence.new{
+	ColorSequenceKeypoint.new(0.000, Color3.fromRGB(74, 86, 111)),
+	ColorSequenceKeypoint.new(1.000, Color3.fromRGB(73, 58, 86))
+})
 local roles = {}
 local esp = false
 local coinesp = false
