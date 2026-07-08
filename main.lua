@@ -8,11 +8,10 @@ local PathfindingService = game:GetService("PathfindingService")
 local client = Players.LocalPlayer
 local character = client.Character or client.CharacterAdded:Wait()
 local deadZone = Vector3.new(14, 517, -26)
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GitLucaI/SLib/refs/heads/main/automatic"))()
-Library:SetBackgroundTheme(ColorSequence.new{
-	ColorSequenceKeypoint.new(0.000, Color3.fromRGB(74, 86, 111)),
-	ColorSequenceKeypoint.new(1.000, Color3.fromRGB(73, 58, 86))
-})
+Library:EnableDataSaving("MM2_Autosave_Config")
+
 local roles = {}
 local esp = false
 local coinesp = false
@@ -638,38 +637,42 @@ Hero:GetPropertyChangedSignal("Value"):Connect(function()
 	if notifyroles and Hero.Value ~= "#" then Library:Notify("Hero is " .. Hero.Value) end
 end)
 
-Library:AddLabel("Visuals")
-Library:AddToggle("Toggle ESP", false, function(state) esp = state end)
-Library:AddToggle("Toggle Coin ESP", false, function(state) 
-	coinesp = state 
-	updateCoinVisibility()
-end)
-Library:AddToggle("Toggle Gundrop ESP", false, function(state) 
-	gundropesp = state 
-	updateCoinVisibility()
-end)
-Library:AddToggle("Show Names", false, function(state) shownames.Value = state end)
+-- Tab Initialization
+local visTab = Library:AddTab("Visuals")
+local notifTab = Library:AddTab("Notify")
+local autoTab = Library:AddTab("Auto")
+local charTab = Library:AddTab("Character")
+local tpTab = Library:AddTab("Teleport")
+local camTab = Library:AddTab("Camera")
+local flingTab = Library:AddTab("Fling")
+local miscTab = Library:AddTab("Misc")
 
-Library:AddLabel("Notify")
-Library:AddToggle("Notify Roles", false, function(state) notifyroles = state end)
-Library:AddToggle("Notify Gundrop", false, function(state) notifygundrop = state end)
+-- Visuals
+Library:AddToggle(visTab, "Toggle ESP", false, function(state) esp = state end)
+Library:AddToggle(visTab, "Toggle Coin ESP", false, function(state) coinesp = state; updateCoinVisibility() end)
+Library:AddToggle(visTab, "Toggle Gundrop ESP", false, function(state) gundropesp = state; updateCoinVisibility() end)
+Library:AddToggle(visTab, "Show Names", false, function(state) shownames.Value = state end)
 
-Library:AddLabel("Auto")
-Library:AddToggle("Auto Gundrop", false, function(state) getgundrop = state end)
-Library:AddToggle("Insta Murderer Win", false, function(state) 
+-- Notify
+Library:AddToggle(notifTab, "Notify Roles", false, function(state) notifyroles = state end)
+Library:AddToggle(notifTab, "Notify Gundrop", false, function(state) notifygundrop = state end)
+
+-- Auto
+Library:AddToggle(autoTab, "Auto Gundrop", false, function(state) getgundrop = state end)
+Library:AddToggle(autoTab, "Insta Murderer Win", false, function(state) 
 	instamurdererwin = state 
 	if state then DoInstaWin() end
 end)
-Library:AddToggle("Auto Sheriff/Hero Win", false, function(state)
+Library:AddToggle(autoTab, "Auto Sheriff/Hero Win", false, function(state)
 	autosheriffwin = state
 	if state then DoAutoSheriffWin() end
 end)
-Library:AddTextbox("Coin Tween Time", "Value", function(input)
+Library:AddTextbox(autoTab, "Coin Tween Time", "0.9", function(input)
 	local ctt = tonumber(input) or 0.9
 	cointweentime = ctt
 end)
-Library:AddToggle("Auto Collect Coins", false, function(state) autocollect = state end)
-Library:AddToggle("Safe Coin Collector", false, function(state) 
+Library:AddToggle(autoTab, "Auto Collect Coins", false, function(state) autocollect = state end)
+Library:AddToggle(autoTab, "Safe Coin Collector", false, function(state) 
 	safecoincollector = state 
 	if state then 
 		DoSafeCoinCollector() 
@@ -680,8 +683,8 @@ Library:AddToggle("Safe Coin Collector", false, function(state)
 	end
 end)
 
-Library:AddLabel("Character")
-Library:AddToggle("Fly", false, function(state)
+-- Character
+Library:AddToggle(charTab, "Fly", false, function(state)
 	flyToggled = state
 	if state then
 		StartFly()
@@ -689,57 +692,54 @@ Library:AddToggle("Fly", false, function(state)
 		StopFly()
 	end
 end)
-Library:AddTextbox("Fly Speed", "Multiplier", function(input)
+Library:AddTextbox(charTab, "Fly Speed", "1", function(input)
 	local newSpeed = tonumber(input)
 	if newSpeed and newSpeed > 0 then
 		iyflyspeed = newSpeed
 	end
 end)
-Library:AddToggle("Noclip", false, function(state) noclip = state end)
-Library:AddTextbox("WalkSpeed", "Value", function(input)
+Library:AddToggle(charTab, "Noclip", false, function(state) noclip = state end)
+Library:AddTextbox(charTab, "WalkSpeed", "16", function(input)
 	local walkspeed = tonumber(input) or 16
 	if walkspeed > 0 and character and character:FindFirstChild("Humanoid") then
 		character.Humanoid.WalkSpeed = walkspeed
 	end
 end)
-Library:AddToggle("Antifling", false, function(state) antifling = state end)
+Library:AddToggle(charTab, "Antifling", false, function(state) antifling = state end)
 
-Library:AddLabel("Teleport")
-Library:AddButton("Teleport to Murderer", function() TeleportTo(Murderer.Value) end)
-Library:AddButton("Teleport to Sheriff", function() TeleportTo(Sheriff.Value) end)
-Library:AddButton("Teleport to Hero", function() TeleportTo(Hero.Value) end)
+-- Teleport
+Library:AddButton(tpTab, "Teleport to Murderer", function() TeleportTo(Murderer.Value) end)
+Library:AddButton(tpTab, "Teleport to Sheriff", function() TeleportTo(Sheriff.Value) end)
+Library:AddButton(tpTab, "Teleport to Hero", function() TeleportTo(Hero.Value) end)
 
-Library:AddLabel("Camera")
-Library:AddTextbox("Field of View", "FOV", function(input)
+-- Camera
+Library:AddTextbox(camTab, "Field of View", "70", function(input)
 	local fov = tonumber(input) or 70
 	workspace.CurrentCamera.FieldOfView = fov
 end)
-Library:AddToggle("Murderer Aimbot", false, function(state) murdereraimbot = state end)
-Library:AddToggle("Sheriff Aimbot", false, function(state) sheriffaimbot = state end)
+Library:AddToggle(camTab, "Murderer Aimbot", false, function(state) murdereraimbot = state end)
+Library:AddToggle(camTab, "Sheriff Aimbot", false, function(state) sheriffaimbot = state end)
 
-Library:AddLabel("Fling")
-Library:AddTextbox("Fling Player", "Name", function(input)
+-- Fling
+Library:AddTextbox(flingTab, "Fling Player Name", "Name Here", function(input)
 	local targetName = GetPlayer(input)
 	if targetName then
 		StartFling(targetName)
 	end
 end)
-Library:AddButton("Fling Murderer", function() StartFling(Murderer.Value) end)
-Library:AddButton("Fling Sheriff", function() StartFling(Sheriff.Value) end)
-Library:AddButton("Fling Hero", function() StartFling(Hero.Value) end)
-Library:AddButton("Stop Fling", function() StopFling() end)
+Library:AddButton(flingTab, "Fling Murderer", function() StartFling(Murderer.Value) end)
+Library:AddButton(flingTab, "Fling Sheriff", function() StartFling(Sheriff.Value) end)
+Library:AddButton(flingTab, "Fling Hero", function() StartFling(Hero.Value) end)
+Library:AddButton(flingTab, "Stop Fling", function() StopFling() end)
 
-Library:AddLabel("Other Scripts")
-Library:AddButton("Infinite Yield", function()
+-- Misc
+Library:AddButton(miscTab, "Infinite Yield", function()
 	loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
 end)
-Library:AddButton("Emote Loader", function()
+Library:AddButton(miscTab, "Emote Loader", function()
 	loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-7yd7-I-Emote-Script-48024"))()
 end)
-
-Library:AddLabel("Place")
-
-Library:AddButton("Rejoin Server", function() TeleportService:Teleport(game.PlaceId, client) end)
+Library:AddButton(miscTab, "Rejoin Server", function() TeleportService:Teleport(game.PlaceId, client) end)
 
 task.spawn(function()
 	while task.wait(0.5) do
